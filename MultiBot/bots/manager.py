@@ -37,3 +37,21 @@ class BotManager:
         for i, r in enumerate(results):
             if isinstance(r, Exception):
                 print(f"[ERR] Bot {i+1} failed to start: {r}")
+            else:
+                print(f"[OK] Bot {i+1} started successfully")
+        
+        # Keep all bots running
+        if self.bots:
+            print(f"[MANAGER] All bots started. Keeping {len(self.bots)} bots alive...")
+            for bot in self.bots:
+                # Keep the bot running indefinitely
+                if not bot.is_closed():
+                    await bot.wait_until_closed()
+                else:
+                    print(f"[WARN] Bot {bot.number} closed unexpectedly")
+                    # Try to restart
+                    try:
+                        await bot.start(bot.bot_token)
+                        print(f"[RESTART] Bot {bot.number} restarted")
+                    except Exception as e:
+                        print(f"[ERR] Bot {bot.number} restart failed: {e}")

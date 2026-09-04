@@ -40,7 +40,7 @@ class TempVoice(commands.Cog):
 
     async def _create_room_logic(self, ctx, name: str = None):
         if not name:
-            await ctx.send(embed=discord.Embed(color=C, description="✏️ **اكتب اسم الفويس اللي عايزه**\nلديك 60 ثانية.\n`الغاء` للإلغاء."))
+            await ctx.send(embed=discord.Embed(color=0x5865f2, description="✏️ **اكتب اسم الفويس اللي عايزه**\nلديك 60 ثانية.\n`الغاء` للإلغاء."))
 
             def check(m):
                 return m.author == ctx.author and m.channel == ctx.channel
@@ -48,15 +48,15 @@ class TempVoice(commands.Cog):
             try:
                 name_msg = await self.bot.wait_for("message", check=check, timeout=60)
             except asyncio.TimeoutError:
-                return await ctx.send(embed=discord.Embed(color=C, description="⏰ **انتهت المهلة**"))
+                return await ctx.send(embed=discord.Embed(color=0xed4245, description="⏰ **انتهت المهلة**"))
 
             name = name_msg.content.strip()
             if name.lower() in ("الغاء", "cancel", "إلغاء"):
-                return await ctx.send(embed=discord.Embed(color=C, description="❌ **تم الإلغاء**"))
+                return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **تم الإلغاء**"))
 
         name = name.strip()
         if name.lower() in ("الغاء", "cancel", "إلغاء"):
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **تم الإلغاء**"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **تم الإلغاء**"))
         if len(name) > 50:
             name = name[:50]
 
@@ -76,17 +76,26 @@ class TempVoice(commands.Cog):
 
         self._schedule_delete(temp)
 
-        await ctx.send(embed=discord.Embed(color=C, description=f"✅ **تم إنشاء فويسك** `{name}`\nأوامر التحكم:\n`اسم رومي` • `حد رومي` • `قفل رومي` • `فتح رومي` • `اقفل الفويس`"))
+        embed = discord.Embed(
+            color=0x57f287,
+            title="✅ تم إنشاء الفويس",
+            description=f"```css\n{name}\n```\n\n🎮 **أوامر التحكم:**\n`اسم رومي` • `حد رومي` • `قفل رومي` • `فتح رومي` • `اقفل الفويس`"
+        )
+        await ctx.send(embed=embed)
 
     async def _create_channel(self, ctx, name):
-        if ctx.author.voice and ctx.author.voice.channel:
-            category = ctx.author.voice.channel.category
-        else:
-            category = None
-            for ch in ctx.guild.channels:
-                if isinstance(ch, discord.CategoryChannel):
-                    category = ch
-                    break
+        # Use specific category for temp voice channels
+        category = ctx.guild.get_channel(782046278842318850)
+        if not category or not isinstance(category, discord.CategoryChannel):
+            # Fallback to user's current category
+            if ctx.author.voice and ctx.author.voice.channel:
+                category = ctx.author.voice.channel.category
+            else:
+                category = None
+                for ch in ctx.guild.channels:
+                    if isinstance(ch, discord.CategoryChannel):
+                        category = ch
+                        break
 
         overwrites = {
             ctx.guild.default_role: discord.PermissionOverwrite(connect=True, speak=True),
@@ -109,21 +118,22 @@ class TempVoice(commands.Cog):
             return None
 
     # ── اسم رومي ──
+    @commands.command(name="اسم", aliases=["اسم_رومي", "رومي"])
     async def rename_room(self, ctx, *, name: str = None):
         if self.bot.number != 1:
             return
         if not name:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **استخدم:** `اسم رومي <الاسم الجديد>`"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **استخدم:** `اسم رومي <الاسم الجديد>`"))
 
         # يقبل "رومي الاسم" أو الاسم مباشرة
         if name.lower().startswith("رومي "):
             name = name[5:].strip()
 
         if not name:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **استخدم:** `اسم رومي <الاسم الجديد>`"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **استخدم:** `اسم رومي <الاسم الجديد>`"))
 
         if not ctx.author.voice or not ctx.author.voice.channel:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **لازم تكون في روم صوتي**"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **لازم تكون في روم صوتي**"))
 
         ch = ctx.author.voice.channel
         config = load_config()
@@ -131,13 +141,18 @@ class TempVoice(commands.Cog):
         info = config.get(gid, {}).get("active_rooms", {}).get(str(ch.id))
 
         if not info or info["owner"] != ctx.author.id:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **ده مش فويسك**"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **ده مش فويسك**"))
 
         if len(name) > 50:
             name = name[:50]
 
         await ch.edit(name=name)
-        await ctx.send(embed=discord.Embed(color=C, description=f"✅ **تم تغيير الاسم** → `{name}`"))
+        embed = discord.Embed(
+            color=0x57f287,
+            title="✅ تم تغيير الاسم",
+            description=f"```css\n{name}\n```"
+        )
+        await ctx.send(embed=embed)
 
     # ── حد رومي ──
     @commands.group(name="حد", invoke_without_command=True)
@@ -149,7 +164,7 @@ class TempVoice(commands.Cog):
         if self.bot.number != 1:
             return
         if not ctx.author.voice or not ctx.author.voice.channel:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **لازم تكون في روم صوتي**"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **لازم تكون في روم صوتي**"))
 
         ch = ctx.author.voice.channel
         config = load_config()
@@ -157,21 +172,27 @@ class TempVoice(commands.Cog):
         info = config.get(gid, {}).get("active_rooms", {}).get(str(ch.id))
 
         if not info or info["owner"] != ctx.author.id:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **ده مش فويسك**"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **ده مش فويسك**"))
 
         if limit < 0 or limit > 99:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **الحد من 0 إلى 99**\n0 = مفتوح"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **الحد من 0 إلى 99**\n0 = مفتوح"))
 
         await ch.edit(user_limit=limit)
-        await ctx.send(embed=discord.Embed(color=C, description=f"✅ **تم تعيين الحد** → {'مفتوح' if limit == 0 else str(limit)}"))
+        embed = discord.Embed(
+            color=0x57f287,
+            title="✅ تم تعيين الحد",
+            description=f"```css\n{'مفتوح' if limit == 0 else str(limit)}\n```"
+        )
+        await ctx.send(embed=embed)
 
     # ── قفل رومي / فتح رومي ──
+    @commands.command(name="قفل", aliases=["قفل_رومي"])
     async def lock_room(self, ctx):
         if self.bot.number != 1:
             return
         await ctx.defer() if hasattr(ctx, 'interaction') and ctx.interaction else None
         if not ctx.author.voice or not ctx.author.voice.channel:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **لازم تكون في روم صوتي**"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **لازم تكون في روم صوتي**"))
 
         ch = ctx.author.voice.channel
         config = load_config()
@@ -179,18 +200,24 @@ class TempVoice(commands.Cog):
         info = config.get(gid, {}).get("active_rooms", {}).get(str(ch.id))
 
         if not info or info["owner"] != ctx.author.id:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **ده مش فويسك**"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **ده مش فويسك**"))
 
         overwrites = ch.overwrites_for(ctx.guild.default_role)
         overwrites.connect = False
         await ch.set_permissions(ctx.guild.default_role, overwrite=overwrites)
-        await ctx.send(embed=discord.Embed(color=C, description="🔒 **تم قفل الروم**"))
+        embed = discord.Embed(
+            color=0xed4245,
+            title="🔒 تم قفل الروم",
+            description="```css\nلا أحد يمكنه الدخول الآن\n```"
+        )
+        await ctx.send(embed=embed)
 
+    @commands.command(name="فتح", aliases=["فتح_رومي"])
     async def unlock_room(self, ctx):
         if self.bot.number != 1:
             return
         if not ctx.author.voice or not ctx.author.voice.channel:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **لازم تكون في روم صوتي**"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **لازم تكون في روم صوتي**"))
 
         ch = ctx.author.voice.channel
         config = load_config()
@@ -198,12 +225,17 @@ class TempVoice(commands.Cog):
         info = config.get(gid, {}).get("active_rooms", {}).get(str(ch.id))
 
         if not info or info["owner"] != ctx.author.id:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **ده مش فويسك**"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **ده مش فويسك**"))
 
         overwrites = ch.overwrites_for(ctx.guild.default_role)
         overwrites.connect = True
         await ch.set_permissions(ctx.guild.default_role, overwrite=overwrites)
-        await ctx.send(embed=discord.Embed(color=C, description="🔓 **تم فتح الروم**"))
+        embed = discord.Embed(
+            color=0x57f287,
+            title="🔓 تم فتح الروم",
+            description="```css\nالجميع يمكنه الدخول الآن\n```"
+        )
+        await ctx.send(embed=embed)
 
     # ── اقفل ──
     @commands.group(name="اقفل", invoke_without_command=True)
@@ -245,21 +277,25 @@ class TempVoice(commands.Cog):
         gid = str(ctx.guild.id)
         active = config.get(gid, {}).get("active_rooms", {})
         if not active:
-            return await ctx.send(embed=discord.Embed(color=C, description="❌ **مافيش فويسات مؤقتة**"))
+            return await ctx.send(embed=discord.Embed(color=0xed4245, description="❌ **مافيش فويسات مؤقتة**"))
 
         count = 0
         for cid in list(active.keys()):
             ch = ctx.guild.get_channel(int(cid))
             if ch:
-                try:
-                    await ch.delete()
-                    count += 1
-                except:
-                    pass
-
+                await self._delete_temp_room(ctx.guild, ch)
+                count += 1
+        
+        # Clear from config
         config[gid]["active_rooms"] = {}
         save_config(config)
-        await ctx.send(embed=discord.Embed(color=C, description=f"✅ **تم مسح {count} فويس**"))
+        
+        embed = discord.Embed(
+            color=0x57f287,
+            title="🗑️ تم مسح جميع الفويسات المؤقتة",
+            description=f"```css\nتم مسح {count} فويس مؤقت\n```"
+        )
+        await ctx.send(embed=embed)
 
     async def _delete_temp_room(self, guild, channel):
         gid = str(guild.id)

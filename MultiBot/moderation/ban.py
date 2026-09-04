@@ -31,6 +31,57 @@ class BanCog(commands.Cog):
         else:
             await ctx.send(f"🚫 **تم حظر {member.mention}** بشكل دائم ({reason or 'بلا سبب'})")
 
+    @commands.command(name="المتبندين", aliases=["المحظورين", "banlist", "bans"])
+    @commands.has_permissions(ban_members=True)
+    async def ban_list(self, ctx):
+        if not ctx.guild.me.guild_permissions.ban_members:
+            return await ctx.send("❌ البوت ليس لديه صلاحية عرض المحظورين")
+        
+        bans = await ctx.guild.bans()
+        if not bans:
+            return await ctx.send("✅ **لا يوجد محظورين في السيرفر**")
+        
+        description = ""
+        for i, ban_entry in enumerate(bans, 1):
+            user = ban_entry.user
+            reason = ban_entry.reason or "بلا سبب"
+            description += f"**{i}.** {user.name}#{user.discriminator} - `{reason}`\n"
+        
+        embed = discord.Embed(
+            color=0xed4245,
+            title="🚫 قائمة المحظورين",
+            description=description
+        )
+        embed.set_footer(text=f"المجموع: {len(bans)} محظور")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="فك", aliases=["unban", "فك_بان"])
+    @commands.has_permissions(ban_members=True)
+    async def unban(self, ctx, number: int):
+        if not ctx.guild.me.guild_permissions.ban_members:
+            return await ctx.send("❌ البوت ليس لديه صلاحية فك الحظر")
+        
+        bans = await ctx.guild.bans()
+        if not bans:
+            return await ctx.send("✅ **لا يوجد محظورين في السيرفر**")
+        
+        if number < 1 or number > len(bans):
+            return await ctx.send(f"❌ **الرقم غير صحيح**\nاستخدم `المتبندين` لعرض القائمة")
+        
+        ban_entry = bans[number - 1]
+        user = ban_entry.user
+        
+        try:
+            await ctx.guild.unban(user)
+            embed = discord.Embed(
+                color=0x57f287,
+                title="✅ تم فك الحظر",
+                description=f"```css\n{user.name}#{user.discriminator}\n```"
+            )
+            await ctx.send(embed=embed)
+        except Exception as e:
+            await ctx.send(f"❌ **فشل فك الحظر:** `{e}`")
+
     @ban.error
     async def ban_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):

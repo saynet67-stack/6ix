@@ -160,8 +160,6 @@ class MusicCommandsCog(commands.Cog):
             # التشغيل مع إظهار الخطأ الحقيقي
             try:
                 await self._lavalink_play(ctx, query, pcog, vc)
-                if self.bot.number == 1:
-                    await ctx.send("✅ **تم التشغيل**")
             except Exception as e:
                 print(f"[PLAY ERROR] {e}")
                 if self.bot.number == 1:
@@ -287,17 +285,18 @@ class MusicCommandsCog(commands.Cog):
         # الوقت الحالي
         current_time = datetime.now().strftime("%-I:%M %p")
         
-        desc = f"**{track.title}**"
+        # تصميم أفضل للوصف
+        desc = f"🎵 **{track.title}**"
         if track.author and track.author != "Unknown":
-            desc += f"\n{track.author}"
-        desc += f"\n\n▸ Duration: `{dur}` {loop_icon}"
+            desc += f"\n👤 **{track.author}**"
+        desc += f"\n\n⏱️ **Duration:** `{dur}` {loop_icon}"
         
         thumb = getattr(track, "artwork", None) or getattr(track, "thumbnail", None) or self._yt_thumb(track.uri)
-        e = discord.Embed(color=0x3ba55c, title=prefix, description=desc)
-        if thumb: e.set_image(url=thumb)
+        e = discord.Embed(color=0x3ba55c, title=f"🎶 {prefix}", description=desc)
+        if thumb: e.set_thumbnail(url=thumb)
         
         # إضافة الوقت في الفوتر
-        e.set_footer(text=f"— {current_time}")
+        e.set_footer(text=f"— {current_time} | Music Bot")
         
         # إضافة طالب الأغنية إذا كان متاح
         pcog = self.bot.get_cog("PlayerCog")
@@ -305,7 +304,7 @@ class MusicCommandsCog(commands.Cog):
             guild_id = getattr(self.bot.guilds[0], 'id', 0) if self.bot.guilds else 0
             requester = pcog.requesters.get(guild_id)
             if requester:
-                e.add_field(name="Requested by", value=f"@{requester.name}", inline=False)
+                e.add_field(name="🎤 Requested by", value=f"@{requester.name}", inline=False)
         
         return e
 

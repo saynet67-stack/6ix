@@ -7,21 +7,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-TOKENS = [
-    os.environ.get("TOKEN_1", "YOUR_TOKEN_1_HERE"),
-    os.environ.get("TOKEN_2", "YOUR_TOKEN_2_HERE"),
-    os.environ.get("TOKEN_3", "YOUR_TOKEN_3_HERE"),
-    os.environ.get("TOKEN_4", "YOUR_TOKEN_4_HERE"),
-    os.environ.get("TOKEN_5", "YOUR_TOKEN_5_HERE"),
-]
+# Load tokens from environment
+TOKENS = []
+for i in range(1, 6):
+    token = os.environ.get(f"TOKEN_{i}")
+    if token and token not in ("YOUR_TOKEN_1_HERE", "YOUR_TOKEN_2_HERE", "YOUR_TOKEN_3_HERE", "YOUR_TOKEN_4_HERE", "YOUR_TOKEN_5_HERE"):
+        TOKENS.append(token)
+        print(f"[CONFIG] Loaded TOKEN_{i}")
+    else:
+        print(f"[CONFIG] TOKEN_{i} not set or placeholder")
 
-VOICE_CHANNELS = [
-    int(os.environ.get("VOICE_ID_1", 0)),
-    int(os.environ.get("VOICE_ID_2", 0)),
-    int(os.environ.get("VOICE_ID_3", 0)),
-    int(os.environ.get("VOICE_ID_4", 0)),
-    int(os.environ.get("VOICE_ID_5", 0)),
-]
+if not TOKENS:
+    print("[CONFIG] WARNING: No valid tokens found!")
+
+VOICE_CHANNELS = []
+for i in range(1, 6):
+    voice_id = os.environ.get(f"VOICE_ID_{i}")
+    if voice_id:
+        try:
+            VOICE_CHANNELS.append(int(voice_id))
+            print(f"[CONFIG] Loaded VOICE_ID_{i}: {voice_id}")
+        except:
+            print(f"[CONFIG] Invalid VOICE_ID_{i}: {voice_id}")
+    else:
+        VOICE_CHANNELS.append(0)
+        print(f"[CONFIG] VOICE_ID_{i} not set")
 
 MUSIC_CHANNEL = int(os.environ.get("MUSIC_CHANNEL", 0))
 PREFIX = [".", ""]
@@ -31,10 +41,12 @@ _ln = os.environ.get("LAVALINK_NODES")
 if _ln:
     LAVALINK_NODES = json.loads(_ln)
 else:
+    # Use working Lavalink nodes
     LAVALINK_NODES = [
-        {"uri": "http://node-us.fsh.ovh:2333", "password": "fsh.ovh-lavalink-is-cool"},
-        {"uri": "http://node-eu.fsh.ovh:2333", "password": "fsh.ovh-lavalink-is-cool"},
-        {"uri": "http://lavalinkv4.serenetia.com:80", "password": "https://dsc.gg/ajidevserver"},
+        {"uri": "http://lavalink.dev:2333", "password": "youshallnotpass"},
+        {"uri": "http://node.korv.eu:2333", "password": "korv.lavalink"},
+        {"uri": "https://lavalink.bots.gg:2333", "password": "lavalink.gg"},
+        {"uri": "http://node1.lavalink.maddevs.xyz:2333", "password": "maddevs"},
     ]
 
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")

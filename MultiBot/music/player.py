@@ -114,8 +114,23 @@ class PlayerCog(commands.Cog):
     async def _connect_and_keep(self):
         await self.bot.wait_until_ready()
         await asyncio.sleep(10)
+        
+        # Check if voice_id is set
+        if not self.bot.voice_id:
+            print(f"[24/7] Bot {self.bot.number} no voice_id configured, skipping auto-connect")
+            return
+        
         channel = self.bot.get_channel(self.bot.voice_id)
-        if not channel: return
+        if not channel:
+            print(f"[24/7] Bot {self.bot.number} voice channel {self.bot.voice_id} not found, skipping")
+            return
+        
+        # Check if bot has permission to join
+        permissions = channel.permissions_for(channel.guild.me)
+        if not permissions.connect:
+            print(f"[24/7] Bot {self.bot.number} missing CONNECT permission in {channel.name}")
+            return
+        
         vc = channel.guild.voice_client
         if vc and isinstance(vc, wavelink.Player):
             print(f"[24/7] Bot {self.bot.number} already connected via Lavalink")
@@ -134,13 +149,13 @@ class PlayerCog(commands.Cog):
         if self._lavalink_ready():
             try:
                 vc = await channel.connect(cls=wavelink.Player)
-                print(f"[24/7] Bot {self.bot.number} connected via Lavalink")
+                print(f"[24/7] Bot {self.bot.number} connected via Lavalink to {channel.name}")
                 return
             except Exception as e:
                 print(f"[24/7] Lavalink connect failed: {e}")
         try:
             vc = await channel.connect()
-            print(f"[24/7] Bot {self.bot.number} connected")
+            print(f"[24/7] Bot {self.bot.number} connected to {channel.name}")
             self._keep_alive_task = asyncio.create_task(self._keep_alive(vc))
         except Exception as e:
             print(f"[24/7] Connect failed: {e}")

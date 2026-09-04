@@ -46,21 +46,12 @@ class WelcomeCog(commands.Cog):
         except Exception:
             file = None
 
-        embed = discord.Embed(color=C)
-        embed.set_author(
-            name=f"مرحباً بك في {member.guild.name}",
-            icon_url=member.guild.icon.url if member.guild.icon else None
-        )
-        embed.description = (
-            f"{member.mention} **انضم إلينا!** 🎊\n\n"
-            f"• العضو رقم `#{member.guild.member_count}`\n"
-            f"• تم إنشاء الحساب: `{member.created_at.strftime('%Y-%m-%d')}`\n\n"
-            f"نتمنى لك أوقاتاً جميلة معنا 💫"
-        )
-        embed.set_footer(
-            text=member.guild.name,
-            icon_url=member.guild.icon.url if member.guild.icon else None
-        )
+        embed = discord.Embed(color=0x5865f2, title="🎉 مرحباً بك في السيرفر!")
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.add_field(name="👤 العضو", value=f"```css\n{member.name}\n```", inline=True)
+        embed.add_field(name="📊 العضو رقم", value=f"```css\n#{member.guild.member_count}\n```", inline=True)
+        embed.add_field(name="📅 تاريخ الحساب", value=f"```css\n{member.created_at.strftime('%Y-%m-%d')}\n```", inline=True)
+        embed.set_footer(text=f"نتمنى لك أوقاتاً جميلة معنا 💫 | {member.guild.name}", icon_url=member.guild.icon.url if member.guild.icon else None)
 
         try:
             if file:

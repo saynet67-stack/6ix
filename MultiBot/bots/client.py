@@ -34,7 +34,8 @@ class MultiBotClient(commands.Bot):
                 "moderation.ban", "moderation.kick", "moderation.mute",
                 "moderation.timeout", "moderation.lock", "moderation.utility",
                 "moderation.games", "moderation.welcome", "moderation.tickets",
-                "moderation.tempvoice", "moderation.logs"
+                "moderation.tempvoice", "moderation.logs", "moderation.trivia",
+                "moderation.tictactoe", "moderation.rps", "moderation.help"
             ]
 
         for cog in cogs:
@@ -65,8 +66,9 @@ class MultiBotClient(commands.Bot):
             )
         )
 
-        # Connect Lavalink nodes — only Bot 1 creates them; others reuse the shared Pool
-        await asyncio.sleep(1)
+        # Connect Lavalink nodes - each bot tries independently for better reliability
+        await asyncio.sleep(2)
+        
         try:
             connected = any(
                 n.status is NodeStatus.CONNECTED for n in wavelink.Pool.nodes.values()
@@ -78,49 +80,68 @@ class MultiBotClient(commands.Bot):
             print(f"[LAVALINK] Bot {self.number} reuses existing pool nodes")
             return
 
-        # If a shared node is currently CONNECTING, wait for it instead of duplicating
-        for _ in range(10):
-            try:
-                pending = any(
-                    n.status in (NodeStatus.CONNECTING, NodeStatus.CONNECTED)
-                    for n in wavelink.Pool.nodes.values()
-                )
-            except Exception:
-                pending = False
-            if not pending:
-                break
-            await asyncio.sleep(1)
-        try:
-            connected = any(
-                n.status is NodeStatus.CONNECTED for n in wavelink.Pool.nodes.values()
-            )
-        except Exception:
-            connected = False
-        if connected:
-            print(f"[LAVALINK] Bot {self.number} joined existing pool nodes")
-            return
-
-        if self.number != 1:
-            print(f"[LAVALINK] Bot {self.number} waits for Bot 1 to connect nodes")
-            return
-
+        # Try to connect if no nodes are connected
+        print(f"[LAVALINK] Bot {self.number} attempting to connect nodes...")
+        
         nodes = [
             wavelink.Node(
                 uri=cfg["uri"],
                 password=cfg["password"],
-                retries=3,
-                identifier=f"shared-{i}"
+                retries=5,
+                identifier=f"bot{self.number}-{i}"
             )
             for i, cfg in enumerate(LAVALINK_NODES)
         ]
 
-        await wavelink.Pool.connect(nodes=nodes, client=self, cache_capacity=100)
+        try:
+            await wavelink.Pool.connect(nodes=nodes, client=self, cache_capacity=50)
+            ok = sum(1 for n in wavelink.Pool.nodes.values() if n.status is NodeStatus.CONNECTED)
+            print(f"[LAVALINK] Bot {self.number} pool nodes connected: {ok}/{len(wavelink.Pool.nodes)}")
+            
+            if not ok:
+                print(f"[LAVALINK] WARNING: Bot {self.number} no node connected. Will retry...")
+                # Schedule retry
+                self.loop.create_task(self._retry_lavalink())
+        except Exception as e:
+            print(f"[LAVALINK] Bot {self.number} connection failed: {e}")
+            self.loop.create_task(self._retry_lavalink())
 
-        ok = sum(1 for n in wavelink.Pool.nodes.values() if n.status is NodeStatus.CONNECTED)
-        print(f"[LAVALINK] Bot {self.number} pool nodes connected: {ok}/{len(wavelink.Pool.nodes)}")
-
-        if not ok:
-            print(f"[LAVALINK] WARNING: no node connected. Check LAVALINK_NODES env: {LAVALINK_NODES}")
+    async def _retry_lavalink(self):
+        """Retry Lavalink connection with exponential backoff"""
+        retries = 0
+        max_retries = 5
+        while retries < max_retries:
+            await asyncio.sleep(30 * (2 ** retries))  # Exponential backoff: 30s, 60s, 120s, 240s, 480s
+            retries += 1
+            
+            try:
+                connected = any(
+                    n.status is NodeStatus.CONNECTED for n in wavelink.Pool.nodes.values()
+                )
+                if connected:
+                    print(f"[LAVALINK] Bot {self.number} already connected, skipping retry")
+                    return
+                    
+                nodes = [
+                    wavelink.Node(
+                        uri=cfg["uri"],
+                        password=cfg["password"],
+                        retries=3,
+                        identifier=f"bot{self.number}-retry-{retries}"
+                    )
+                    for i, cfg in enumerate(LAVALINK_NODES)
+                ]
+                
+                await wavelink.Pool.connect(nodes=nodes, client=self, cache_capacity=50)
+                ok = sum(1 for n in wavelink.Pool.nodes.values() if n.status is NodeStatus.CONNECTED)
+                print(f"[LAVALINK] Bot {self.number} retry {retries} connected: {ok}/{len(wavelink.Pool.nodes)}")
+                
+                if ok > 0:
+                    return
+            except Exception as e:
+                print(f"[LAVALINK] Bot {self.number} retry {retries} failed: {e}")
+        
+        print(f"[LAVALINK] Bot {self.number} gave up after {max_retries} retries")
 
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CommandNotFound):
@@ -142,4 +163,19 @@ class MultiBotClient(commands.Bot):
             pass
 
     async def on_error(self, event, *args, **kwargs):
-        print(f"[ERROR] Bot {self.number} event {event}: {traceback.format_exc()}")
+        error_msg = traceback.format_exc()
+        print(f"[ERROR] Bot {self.number} event {event}: {error_msg}")
+        
+        # Log critical errors for debugging
+        if "voice" in event.lower() or "lavalink" in event.lower():
+            print(f"[CRITICAL] Bot {self.number} {event} error - may affect music playback")
+        
+        # Attempt recovery for voice-related errors
+        if "voice" in event.lower():
+            try:
+                vc = self.voice_client
+                if vc:
+                    await vc.disconnect(force=True)
+                    print(f"[RECOVERY] Bot {self.number} disconnected from voice due to error")
+            except:
+                pass
